@@ -1,0 +1,115 @@
+from Organism import Organism
+from Target import Target
+from Obstacle import Obstacle
+
+#THINGS USER CAN CHANGE
+fps = 300
+number_of_organisms = 10
+targetPositions = [500,200,30]
+startingPositions = [50,200,10]
+obstaclePositions = [[200,200,50],[300,100,50],[300,300,50],[400,200,50]]
+lifeTime = 100
+mutationRate = 0.2
+durationMultiple = 20
+baseDNA = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+#THINGS USER CANNOT CHANGE
+
+frames = 0
+generations = 0
+oragnisms = []
+numberOfTargetHits = 0
+max_target_hits = 0
+maxFitness = 0
+alphaOrganism = None
+target = Target(targetPositions[0],targetPositions[1],targetPositions[2])
+obstacles = []
+target_hits = 0
+max_target_hits = 0
+
+def setup():
+  frameRate(fps);
+  size(600,400);
+  for i in range(len(obstaclePositions)):
+      obstacles.append(Obstacle(obstaclePositions[i][0],obstaclePositions[i][1],obstaclePositions[i][2]))    
+  spawn_new_organisms()
+  
+def draw():
+    global frames,generations,target_hits,fitness,maxFitness,baseDNA,alphaOrganism,max_target_hits
+    frameRate(fps);
+    background(230);
+    fill(0);
+    textSize(10);
+    text("'l' and 'm' arrows to change FPS",5,10);
+    text("'s' to slow down FPS to 1 and 'f' to speed up FPS to 300", 5, 20);
+    text("Max FPS:" + str(fps), 5, 30);
+    text("Mutation rate:" + str(mutationRate), 5, 40);
+    text("Frames:" + str(frames), 5, 50);
+    text("Max Fitness:" + str(maxFitness), 5, 70);
+    text("Base DNA:" + str(baseDNA), 5,60);
+    text("Target Hits:" + str(target_hits), 5,80);
+    text("Max Target Hits:" + str(max_target_hits / 2) + "/" + str(len(organisms)), 5,90);
+    text("Generations:" + str(generations), 5, 100);
+        
+    fill(255)
+    ellipse(startingPositions[0],startingPositions[1],startingPositions[2],startingPositions[2])
+    
+    if frames % lifeTime == 0:
+        for i in range(number_of_organisms):
+            if target_hits > max_target_hits:
+                max_target_hits = target_hits
+            organisms[i].fitness = (dist(startingPositions[0],startingPositions[1],target.x,target.y) - dist(organisms[i].x,organisms[i].y,target.x,target.y)) + organisms[i].hit_target + max_target_hits
+            if organisms[i].fitness > maxFitness:
+                maxFitness = organisms[i].fitness
+                alphaOrganism = organisms[i]
+        if alphaOrganism != None:
+            baseDNA = copy_DNA(alphaOrganism.organismDNA)
+        spawn_new_organisms()
+        generations += 1
+        target_hits = 0                        
+    for i in range(number_of_organisms):
+        organisms[i].update() 
+        if organisms[i].hit_target == True and organisms[i].hit_target_counted != True:
+            target_hits += 1
+            organisms[i].hit_target_counted = True
+        if touching(organisms[i],target) and organisms[i].hit_target != True:
+            organisms[i].hit = True
+            organisms[i].hit_target = True
+            target_hits += 1
+        for j in range(len(obstacles)):
+            obstacles[j].update()
+            if touching(organisms[i],obstacles[j]):   
+                organisms[i].hit = True 
+    target.update()
+    frames += 1
+
+def spawn_new_organisms():
+    global organisms
+    organisms = []
+    for i in range(number_of_organisms):
+        organisms.append(Organism(startingPositions[0],startingPositions[1],startingPositions[2],copy_DNA(baseDNA)))
+        organisms[i].tag = i
+        organisms[i].mutate(mutationRate,durationMultiple)
+        organisms[i].update()        
+        
+def keyTyped():
+    global fps
+    if key == 'l':
+        fps -= 1
+    elif key == 'm':
+        fps += 1
+    elif key == 's':
+        fps = 1
+    elif key == 'f':
+        fps = 300
+
+def touching(object1,object2):
+    d = dist(object1.x,object1.y,object2.x,object2.y)
+    if d < (object1.w/2 + object2.w/2):
+        return True
+    
+def copy_DNA(DNA):
+    temp_array = [[None,None,None],[None,None,None],[None,None,None],[None,None,None],[None,None,None]]
+    for i in range(len(DNA)):
+        for j in range(3):
+            temp_array[i][j] = DNA[i][j] 
+    return temp_array
